@@ -45,7 +45,7 @@ def listar_usuarios(db: Session = Depends(get_db)):
 
 # Actualizar un usuario
 @router.put("/{usuario_id}", response_model=UsuarioOut)
-def actualizar_usuario(usuario_id: int, usuario: UsuarioCreate, db: Session = Depends(get_db)):
+def actualizar_info_usuario(usuario_id: int, usuario: UsuarioCreate, db: Session = Depends(get_db)):
     db_usuario = db.query(Usuario).filter(Usuario.id == usuario_id).first()
     if not db_usuario:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
@@ -59,6 +59,21 @@ def actualizar_usuario(usuario_id: int, usuario: UsuarioCreate, db: Session = De
     db_usuario.password = usuario.password
     db_usuario.rol = usuario.rol
 
+    db.commit()
+    db.refresh(db_usuario)
+    return db_usuario
+
+# Eliminacion logica de usuario
+@router.patch("/{usuario_id}", response_model=UsuarioOut)
+def eliminar_usuario(usuario_id: int, db: Session = Depends(get_db)):
+    db_usuario = db.query(Usuario).filter(Usuario.id == usuario_id).first()
+    if not db_usuario:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
+    
+    if  db_usuario.estado:
+        db_usuario.estado = False
+    else:
+        raise HTTPException(status_code=status.HTTP_208_ALREADY_REPORTED, detail="El usuario ya esta eliminado")
     db.commit()
     db.refresh(db_usuario)
     return db_usuario

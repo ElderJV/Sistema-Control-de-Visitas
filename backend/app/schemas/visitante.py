@@ -13,6 +13,7 @@ class VisitanteCreate(VisitanteBase):
 class VisitanteOut(VisitanteBase):
     id: int
     created_at: datetime
+    estado: bool
 
     class Config:
         orm_mode = True
