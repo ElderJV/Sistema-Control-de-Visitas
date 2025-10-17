@@ -33,3 +33,33 @@ def listar_visitantes(db: Session = Depends(get_db)):
     visitantes = db.query(Visitante).all()
     return visitantes
 
+# Actualizar informacion de visitante
+@router.put("/{visitante.id}",response_model=VisitanteOut)
+def actualizar_info_visitante(visitante_id: int, visitante: VisitanteCreate, db: Session = Depends(get_db)):
+    db_visitante = db.query(Visitante).filter(Visitante.id == visitante_id).first()
+    
+    if not db_visitante:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Visitante no encontrado")
+    
+    db_visitante.nombre = visitante.nombre
+    db_visitante.apellido = visitante.apellido
+    db_visitante.dni = visitante.dni
+    
+    db.commit()
+    db.refresh(db_visitante)
+    return db_visitante
+
+# Eliminacion logica de visitante
+@router.patch("/{visitante_id}", response_model=VisitanteOut)
+def eliminar_visitante(visitante_id: int, db: Session = Depends(get_db)):
+    db_visitante = db.query(Visitante).filter(Visitante.id == visitante_id).first()
+    if not db_visitante:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="visitante no encontrado")
+    
+    if  db_visitante.estado:
+        db_visitante.estado = False
+    else:
+        raise HTTPException(status_code=status.HTTP_208_ALREADY_REPORTED, detail="El visitante ya esta eliminado")
+    db.commit()
+    db.refresh(db_visitante)
+    return db_visitante
