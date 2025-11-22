@@ -2,7 +2,7 @@ import { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
 import JsBarcode from "jsbarcode";
-import { VisitantesContext } from "../Context/VisitantesContext";
+import { VisitantesContext } from "../context/VisitantesContext";
 
 export default function Home() {
   const [showForm, setShowForm] = useState(false);

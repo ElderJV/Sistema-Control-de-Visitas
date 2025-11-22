@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useContext } from "react";
-import { VisitantesContext } from "../Context/VisitantesContext";
+import { VisitantesContext } from "../../context/VisitantesContext";
 
 export default function Navbar() {
   const { usuario, logout } = useContext(VisitantesContext);

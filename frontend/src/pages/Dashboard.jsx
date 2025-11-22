@@ -1,6 +1,6 @@
 import { useContext } from "react"; 
 import { useNavigate } from "react-router-dom";
-import { VisitantesContext } from "../Context/VisitantesContext";
+import { VisitantesContext } from "../context/VisitantesContext";
 
 export default function Dashboard() {
   const { visitantes } = useContext(VisitantesContext);
