@@ -1,0 +1,15 @@
+name: Issue Management
+
+on:
+  issues:
+    types: [opened, labeled]
+
+jobs:
+  issue-triage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for critical bugs
+        if: contains(github.event.issue.labels.*.name, 'critical-bug')
+        run: |
+          echo "Critical bug detected! Notifying team..."
+          # Aquí puedes agregar notificaciones a Slack, Discord, etc.
