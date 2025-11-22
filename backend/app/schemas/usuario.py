@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
+from typing import Optional
 
 class UsuarioBase(BaseModel):
     nombre: str
@@ -19,6 +20,8 @@ class UsuarioCreate(UsuarioBase):
 class UsuarioOut(UsuarioBase):
     id: int
     created_at: datetime
+    estado: bool
     
     class Config:
         orm_mode = True
+        
