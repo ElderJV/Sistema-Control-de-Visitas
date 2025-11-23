@@ -1,240 +1,390 @@
-import { useState, useContext } from "react";
-import { useNavigate } from "react-router-dom";
-import jsPDF from "jspdf";
-import JsBarcode from "jsbarcode";
-import { VisitantesContext } from "../Context/VisitantesContext";
+import React, { useState, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { VisitantesContext } from '../Context/VisitantesContext';
+import './Home.css';
 
-export default function Home() {
-  const [showForm, setShowForm] = useState(false);
-  const [showTicket, setShowTicket] = useState(false);
-  const [ticket, setTicket] = useState(null);
+const Home = () => {
   const navigate = useNavigate();
-  const { agregarVisitante, visitantes } = useContext(VisitantesContext);
+  const { agregarVisitante } = useContext(VisitantesContext);
+  
+  const [showForm, setShowForm] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+  const [loginData, setLoginData] = useState({
+    usuario: '',
+    contraseña: ''
+  });
+  const [loginError, setLoginError] = useState(false);
 
-  const handleRegister = (formData) => {
-    const fechaHora = new Date().toLocaleString();
-    const codigo = Math.floor(100000 + Math.random() * 900000);
+  const [formData, setFormData] = useState({
+    nombre: '',
+    piso: '',
+    departamento: '',
+    anfitrion: '',
+    motivo: ''
+  });
 
-    const newTicket = { ...formData, fechaHora, codigo };
-    agregarVisitante(newTicket);
-    setTicket(newTicket);
-    setShowForm(false);
-    setShowTicket(true);
+  // Opciones para los selects
+  const pisos = [
+    { value: '', label: 'Seleccione un piso' },
+    { value: '1', label: 'Piso 1' },
+    { value: '2', label: 'Piso 2' },
+    { value: '3', label: 'Piso 3' },
+    { value: '4', label: 'Piso 4' },
+    { value: '5', label: 'Piso 5' }
+  ];
+
+  const motivos = [
+    { value: '', label: 'Seleccione un motivo' },
+    { value: 'cumpleanos', label: 'Celebraciones de cumpleaños o aniversarios' },
+    { value: 'cuidado', label: 'Cuidado de niños o mascotas' },
+    { value: 'reuniones', label: 'Reuniones familiares' },
+    { value: 'cortesia', label: 'Visitas de cortesía o saludo' },
+    { value: 'paquetes', label: 'Traer regalos, paquetes o correspondencia' }
+  ];
+
+  // Generar departamentos basados en el piso seleccionado
+  const getDepartamentos = () => {
+    if (!formData.piso) return [];
     
-    // ✅ GENERAR PDF DESPUÉS DE REGISTRAR
-    generarPDF(newTicket);
+    const departamentos = [];
+    const baseNumber = parseInt(formData.piso) * 100;
+    
+    for (let i = 1; i <= 5; i++) {
+      const numeroDepartamento = baseNumber + i;
+      departamentos.push({
+        value: numeroDepartamento.toString(),
+        label: `Departamento ${numeroDepartamento}`
+      });
+    }
+    
+    return departamentos;
   };
 
-  // ✅ FUNCIÓN PARA GENERAR EL PDF
-  const generarPDF = (ticketData) => {
-    const doc = new jsPDF();
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
     
-    // Configuración del documento
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.text("TICKET DE REGISTRO", 105, 20, { align: "center" });
-    
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Nombre: ${ticketData.nombres} ${ticketData.apellidos}`, 20, 40);
-    doc.text(`DNI: ${ticketData.dni}`, 20, 50);
-    doc.text(`Departamento: ${ticketData.departamento}`, 20, 60);
-    doc.text(`Motivo: ${ticketData.motivo}`, 20, 70);
-    doc.text(`Fecha: ${ticketData.fechaHora}`, 20, 80);
-    doc.text(`Código: ${ticketData.codigo}`, 20, 90);
-
-    // Generar código de barras con el código
-    const canvas = document.createElement("canvas");
-    JsBarcode(canvas, ticketData.codigo.toString(), { 
-      format: "CODE128", 
-      width: 2, 
-      height: 40,
-      displayValue: true 
-    });
-    const barcodeImg = canvas.toDataURL("image/png");
-    doc.addImage(barcodeImg, "PNG", 55, 100, 100, 30);
-
-    // Añadir línea separadora
-    doc.setDrawColor(200, 200, 200);
-    doc.line(20, 95, 190, 95);
-
-    // ✅ ABRIR PDF EN NUEVA PESTAÑA
-    setTimeout(() => {
-      const pdfDataUrl = doc.output("datauristring");
-      const newWindow = window.open();
+    setFormData(prev => {
+      const newData = { ...prev, [name]: value };
       
-      if (newWindow) {
-        newWindow.document.write(`
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <title>Ticket de Visitante - ${ticketData.nombres}</title>
-              <style>
-                body { margin: 0; padding: 20px; background-color: #f5f5f5; }
-                .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
-                h1 { color: #333; text-align: center; }
-                iframe { border: none; border-radius: 5px; width: 100%; height: 500px; }
-                .download-btn { display: block; margin: 20px auto; padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 5px; }
-              </style>
-            </head>
-            <body>
-              <div class="container">
-                <h1>Ticket de Visitante</h1>
-                <iframe src="${pdfDataUrl}"></iframe>
-                <a href="${pdfDataUrl}" download="ticket-${ticketData.nombres}-${ticketData.codigo}.pdf" class="download-btn">
-                  Descargar Ticket
-                </a>
-              </div>
-            </body>
-          </html>
-        `);
-        newWindow.document.close();
-      } else {
-        // Fallback: descargar directamente
-        doc.save(`ticket-${ticketData.nombres}-${ticketData.codigo}.pdf`);
+      // Si cambia el piso, resetear el departamento
+      if (name === 'piso') {
+        newData.departamento = '';
       }
-    }, 500);
+      
+      return newData;
+    });
   };
 
-  return (
-    <div className="max-w-4xl mx-auto p-6 relative">
-      {/* Botón de inicio en la esquina superior derecha */}
-      <button
-        className="absolute top-4 right-4 px-4 py-2 bg-green-600 text-white rounded"
-        onClick={() => navigate("/login")}
-      >
-        Iniciar Sesión
-      </button>
+  const handleLoginChange = (e) => {
+    const { name, value } = e.target;
+    setLoginData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    setLoginError(false);
+  };
 
-      <div className="bg-white p-6 rounded shadow text-center space-y-4">
-        <h2 className="text-2xl font-semibold">¡Bienvenido al Edificio!</h2>
-        {/* Reseña debajo del título */}
-        <p className="text-gray-600">
-          Este sistema te permitirá registrar visitantes de manera sencilla y 
-          generar un ticket con todos los datos necesarios para tu control.
-        </p>
+  const handleLoginSubmit = (e) => {
+    e.preventDefault();
+    
+    // Credenciales hardcodeadas (admin/admin)
+    if (loginData.usuario === 'admin' && loginData.contraseña === 'admin') {
+      navigate('/dashboard');
+    } else {
+      setLoginError(true);
+    }
+  };
 
-        <button
-          className="px-4 py-2 bg-blue-600 text-white rounded"
-          onClick={() => setShowForm(true)}
-        >
-          Registrar Datos
-        </button>
-      </div>
-
-      {/* Modal de formulario */}
-      {showForm && (
-        <FormularioRegistro
-          onClose={() => setShowForm(false)}
-          onRegister={handleRegister}
-        />
-      )}
-
-      {/* Modal de ticket */}
-      {showTicket && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-          <div className="bg-white p-6 rounded w-full max-w-md text-center">
-            <h3 className="text-lg font-semibold mb-2">Registro exitoso ✅</h3>
-            <p className="mb-2">Se generó el ticket con tus datos:</p>
-            <div className="text-left mb-3">
-              <p><b>Nombre:</b> {ticket.nombres} {ticket.apellidos}</p>
-              <p><b>DNI:</b> {ticket.dni}</p>
-              <p><b>Departamento:</b> {ticket.departamento}</p>
-              <p><b>Motivo:</b> {ticket.motivo}</p>
-              <p><b>Fecha y Hora:</b> {ticket.fechaHora}</p>
-              <p><b>Código de visitante:</b> {ticket.codigo}</p>
+  const generatePDF = (visitante) => {
+    // Crear contenido del PDF
+    const pdfContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 20px; }
+          .ticket { border: 2px solid #333; padding: 20px; max-width: 400px; }
+          .header { text-align: center; background: #2c3e50; color: white; padding: 10px; margin-bottom: 20px; }
+          .info { margin: 10px 0; }
+          .label { font-weight: bold; }
+          .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }
+          .qr-code { text-align: center; margin: 20px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="ticket">
+          <div class="header">
+            <h2>TICKET DE VISITA</h2>
+            <p>Control de Acceso - Edificio Residencial</p>
+          </div>
+          
+          <div class="info">
+            <span class="label">Visitante:</span> ${visitante.nombre}
+          </div>
+          
+          <div class="info">
+            <span class="label">Destino:</span> ${visitante.departamento}
+          </div>
+          
+          <div class="info">
+            <span class="label">Anfitrión:</span> ${visitante.anfitrion}
+          </div>
+          
+          <div class="info">
+            <span class="label">Motivo:</span> ${visitante.motivo}
+          </div>
+          
+          <div class="info">
+            <span class="label">Fecha y Hora:</span> ${new Date().toLocaleString()}
+          </div>
+          
+          <div class="qr-code">
+            <div style="border: 1px dashed #ccc; padding: 10px; display: inline-block;">
+              [CÓDIGO QR]
             </div>
-            <button
-              className="px-4 py-2 bg-green-600 text-white rounded"
-              onClick={() => setShowTicket(false)}
-            >
-              OK
-            </button>
+          </div>
+          
+          <div class="footer">
+            <p>Este ticket debe ser presentado al salir del edificio</p>
+            <p>Válido por 24 horas</p>
           </div>
         </div>
-      )}
-    </div>
-  );
-}
+      </body>
+      </html>
+    `;
 
-function FormularioRegistro({ onClose, onRegister }) {
-  const [nombres, setNombres] = useState("");
-  const [apellidos, setApellidos] = useState("");
-  const [dni, setDni] = useState("");
-  const [departamento, setDepartamento] = useState("");
-  const [motivo, setMotivo] = useState("");
+    // Crear ventana para imprimir
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(pdfContent);
+    printWindow.document.close();
+    
+    // Esperar a que cargue el contenido y luego imprimir
+    setTimeout(() => {
+      printWindow.print();
+      // No cerramos la ventana automáticamente para que el usuario pueda ver el ticket
+    }, 250);
+  };
 
-  const submit = (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-
-    // Validación manual extra
-    if (!nombres || !apellidos || !dni || !departamento || !motivo) {
-      alert("Todos los campos son obligatorios");
+    
+    if (!formData.nombre || !formData.piso || !formData.departamento || !formData.anfitrion || !formData.motivo) {
+      alert('Por favor, complete todos los campos');
       return;
     }
 
-    onRegister({ nombres, apellidos, dni, departamento, motivo });
+    // Encontrar el label del motivo seleccionado
+    const motivoLabel = motivos.find(m => m.value === formData.motivo)?.label || formData.motivo;
+    const departamentoLabel = getDepartamentos().find(d => d.value === formData.departamento)?.label || formData.departamento;
+
+    const nuevoVisitante = {
+      nombre: formData.nombre,
+      departamento: departamentoLabel,
+      anfitrion: formData.anfitrion,
+      motivo: motivoLabel,
+      piso: formData.piso
+    };
+
+    // Agregar a la base de datos
+    agregarVisitante(nuevoVisitante);
+    
+    // Generar PDF
+    generatePDF(nuevoVisitante);
+    
+    // Resetear formulario pero NO redirigir al dashboard
+    setFormData({
+      nombre: '',
+      piso: '',
+      departamento: '',
+      anfitrion: '',
+      motivo: ''
+    });
+    
+    setShowForm(false);
+    alert('Visitante registrado exitosamente! Se ha generado el ticket.');
   };
 
+  const departamentos = getDepartamentos();
+
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-      <form
-        onSubmit={submit}
-        className="bg-white p-6 rounded w-full max-w-md space-y-3"
-      >
-        <h3 className="text-lg font-semibold">Registrar visita</h3>
-        <input
-          className="w-full border px-3 py-2"
-          placeholder="Nombres"
-          value={nombres}
-          onChange={(e) => setNombres(e.target.value)}
-          required
-        />
-        <input
-          className="w-full border px-3 py-2"
-          placeholder="Apellidos"
-          value={apellidos}
-          onChange={(e) => setApellidos(e.target.value)}
-          required
-        />
-        <input
-          type="text"
-          className="w-full border px-3 py-2"
-          placeholder="DNI"
-          value={dni}
-          onChange={(e) => setDni(e.target.value)}
-          required
-        />
-        <input
-          className="w-full border px-3 py-2"
-          placeholder="Departamento que visita"
-          value={departamento}
-          onChange={(e) => setDepartamento(e.target.value)}
-          required
-        />
-        <input
-          className="w-full border px-3 py-2"
-          placeholder="Motivo de visita"
-          value={motivo}
-          onChange={(e) => setMotivo(e.target.value)}
-          required
-        />
-        <div className="flex justify-end gap-3 mt-4">
-          <button
-            type="button"
-            className="px-3 py-1 border"
-            onClick={onClose}
+    <div className="home-container">
+      <div className="home-header">
+        <h1>¡Bienvenido al Edificio!</h1>
+        <p>Este sistema te permitirá registrar visitantes de manera sencilla y generar un ticket con todos los datos necesarios para tu control.</p>
+      </div>
+
+      {!showForm && !showLogin ? (
+        <div className="home-actions">
+          <button 
+            className="btn-register" 
+            onClick={() => setShowForm(true)}
           >
-            Cancelar
+            Registrar Datos
           </button>
-          <button
-            type="submit"
-            className="px-3 py-1 bg-blue-600 text-white rounded"
+          <button 
+            className="btn-login" 
+            onClick={() => setShowLogin(true)}
           >
-            Registrar
+            Iniciar Sesión
           </button>
         </div>
-      </form>
+      ) : showLogin ? (
+        <div className="login-form">
+          <h2>Iniciar Sesión</h2>
+          {loginError && (
+            <div className="error-message">
+              Usuario o contraseña incorrectos
+            </div>
+          )}
+          <form onSubmit={handleLoginSubmit}>
+            <div className="form-group">
+              <label htmlFor="usuario">Usuario</label>
+              <input
+                type="text"
+                id="usuario"
+                name="usuario"
+                value={loginData.usuario}
+                onChange={handleLoginChange}
+                placeholder="Ingrese su usuario"
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="contraseña">Contraseña</label>
+              <input
+                type="password"
+                id="contraseña"
+                name="contraseña"
+                value={loginData.contraseña}
+                onChange={handleLoginChange}
+                placeholder="Ingrese su contraseña"
+                required
+              />
+            </div>
+
+            <div className="form-actions">
+              <button type="submit" className="btn-submit">
+                Ingresar
+              </button>
+              <button 
+                type="button" 
+                className="btn-cancel"
+                onClick={() => setShowLogin(false)}
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+          <div className="login-help">
+            <p><strong>Credenciales de prueba:</strong></p>
+            <p>Usuario: admin</p>
+            <p>Contraseña: admin</p>
+          </div>
+        </div>
+      ) : (
+        <div className="registration-form">
+          <h2>Registrar Nueva Visita</h2>
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label htmlFor="nombre">Nombre del Visitante *</label>
+              <input
+                type="text"
+                id="nombre"
+                name="nombre"
+                value={formData.nombre}
+                onChange={handleInputChange}
+                placeholder="Ingrese el nombre completo"
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="piso">Piso *</label>
+              <select
+                id="piso"
+                name="piso"
+                value={formData.piso}
+                onChange={handleInputChange}
+                required
+              >
+                {pisos.map(piso => (
+                  <option key={piso.value} value={piso.value}>
+                    {piso.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="departamento">Departamento *</label>
+              <select
+                id="departamento"
+                name="departamento"
+                value={formData.departamento}
+                onChange={handleInputChange}
+                disabled={!formData.piso}
+                required
+              >
+                <option value="">Seleccione un departamento</option>
+                {departamentos.map(depto => (
+                  <option key={depto.value} value={depto.value}>
+                    {depto.label}
+                  </option>
+                ))}
+              </select>
+              {!formData.piso && (
+                <small className="form-help">Primero seleccione un piso</small>
+              )}
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="anfitrion">Nombre del Anfitrión *</label>
+              <input
+                type="text"
+                id="anfitrion"
+                name="anfitrion"
+                value={formData.anfitrion}
+                onChange={handleInputChange}
+                placeholder="Persona que recibe al visitante"
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="motivo">Motivo de la Visita *</label>
+              <select
+                id="motivo"
+                name="motivo"
+                value={formData.motivo}
+                onChange={handleInputChange}
+                required
+              >
+                {motivos.map(motivo => (
+                  <option key={motivo.value} value={motivo.value}>
+                    {motivo.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-actions">
+              <button type="submit" className="btn-submit">
+                Registrar Visita y Generar Ticket
+              </button>
+              <button 
+                type="button" 
+                className="btn-cancel"
+                onClick={() => setShowForm(false)}
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
-}
+};
+
+export default Home;

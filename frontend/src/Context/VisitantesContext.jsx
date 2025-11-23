@@ -1,23 +1,36 @@
-import { createContext, useState } from "react";
+import React, { createContext, useState } from 'react';
 
 export const VisitantesContext = createContext();
 
-export function VisitantesProvider({ children }) {
+export const VisitantesProvider = ({ children }) => {
   const [visitantes, setVisitantes] = useState([]);
-  const [usuario, setUsuario] = useState(null);
 
-  const agregarVisitante = (visitante) => {
-    setVisitantes([...visitantes, visitante]);
+  const agregarVisitante = (nuevoVisitante) => {
+    const visitanteConId = {
+      ...nuevoVisitante,
+      id: Date.now(),
+      fechaEntrada: new Date().toISOString(),
+      estado: 'activo'
+    };
+    
+    setVisitantes(prev => [visitanteConId, ...prev]);
   };
 
-  const login = (nombreUsuario) => setUsuario(nombreUsuario);
-  const logout = () => setUsuario(null);
+  const actualizarVisitante = (id, datosActualizados) => {
+    setVisitantes(prev => 
+      prev.map(visit => 
+        visit.id === id ? { ...visit, ...datosActualizados } : visit
+      )
+    );
+  };
 
   return (
-    <VisitantesContext.Provider
-      value={{ visitantes, agregarVisitante, usuario, login, logout }}
-    >
+    <VisitantesContext.Provider value={{
+      visitantes,
+      agregarVisitante,
+      actualizarVisitante
+    }}>
       {children}
     </VisitantesContext.Provider>
   );
-}
+};
