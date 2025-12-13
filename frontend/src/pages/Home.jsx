@@ -1,12 +1,10 @@
-import React, { useState, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { VisitantesContext } from '../Context/VisitantesContext';
-import './Home.css';
+import { useState, useContext } from "react";
+import { useNavigate } from "react-router-dom";
+import jsPDF from "jspdf";
+import JsBarcode from "jsbarcode";
+import { VisitantesContext } from "../context/VisitantesContext";
 
-const Home = () => {
-  const navigate = useNavigate();
-  const { agregarVisitante } = useContext(VisitantesContext);
-  
+export default function Home() {
   const [showForm, setShowForm] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [loginData, setLoginData] = useState({

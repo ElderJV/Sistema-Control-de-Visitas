@@ -3,12 +3,13 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.usuario import Usuario
 from app.schemas.usuario import UsuarioCreate, UsuarioOut
+from app.utils.passwords import hash_password
 
 
 router = APIRouter(prefix="/usuarios", tags=["Usuarios"])
 # Crear un nuevo usuario
-@router.post("/", response_model=UsuarioCreate, status_code=status.HTTP_201_CREATED)
-def crear_usuario(usuario: UsuarioCreate, db: Session = Depends(get_db)):
+@router.post("/", response_model=UsuarioOut, status_code=status.HTTP_201_CREATED) 
+async def crear_usuario(usuario: UsuarioCreate, db: Session = Depends(get_db)):
     db_usuario = db.query(Usuario).filter(Usuario.email == usuario.email).first()
     if db_usuario:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El usuario ya existe")
@@ -20,13 +21,12 @@ def crear_usuario(usuario: UsuarioCreate, db: Session = Depends(get_db)):
         email=usuario.email,
         departamento=usuario.departamento,
         telefono=usuario.telefono,
-        password=usuario.password,
+        password= hash_password(usuario.password),
         rol=usuario.rol
     )
     db.add(nuevo_usuario)
     db.commit()
     db.refresh(nuevo_usuario)
-
     return nuevo_usuario
 
 # Obtener un usuario por ID
@@ -45,7 +45,7 @@ def listar_usuarios(db: Session = Depends(get_db)):
 
 # Actualizar un usuario
 @router.put("/{usuario_id}", response_model=UsuarioOut)
-def actualizar_usuario(usuario_id: int, usuario: UsuarioCreate, db: Session = Depends(get_db)):
+def actualizar_info_usuario(usuario_id: int, usuario: UsuarioCreate, db: Session = Depends(get_db)):
     db_usuario = db.query(Usuario).filter(Usuario.id == usuario_id).first()
     if not db_usuario:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
@@ -56,9 +56,24 @@ def actualizar_usuario(usuario_id: int, usuario: UsuarioCreate, db: Session = De
     db_usuario.email = usuario.email
     db_usuario.departamento = usuario.departamento
     db_usuario.telefono = usuario.telefono
-    db_usuario.password = usuario.password
+    db_usuario.password = hash_password(usuario.password)
     db_usuario.rol = usuario.rol
 
+    db.commit()
+    db.refresh(db_usuario)
+    return db_usuario
+
+# Eliminacion logica de usuario
+@router.patch("/{usuario_id}", response_model=UsuarioOut)
+def eliminar_usuario(usuario_id: int, db: Session = Depends(get_db)):
+    db_usuario = db.query(Usuario).filter(Usuario.id == usuario_id).first()
+    if not db_usuario:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
+    
+    if  db_usuario.estado:
+        db_usuario.estado = False
+    else:
+        raise HTTPException(status_code=status.HTTP_208_ALREADY_REPORTED, detail="El usuario ya esta eliminado")
     db.commit()
     db.refresh(db_usuario)
     return db_usuario

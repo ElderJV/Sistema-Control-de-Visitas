@@ -1,21 +1,24 @@
 import { useState } from "react"; 
 import { useNavigate } from "react-router-dom";
+//Importamos el contexto de autenticación
+import { useContext } from "react";
+import { AuthContext } from "../context/AuthContext";
 
 export default function Login() {
   const [usuario, setUsuario] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const { login } = useContext(AuthContext);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (usuario === "admin" && password === "1234") {
-      // Guardamos usuario en localStorage
-      localStorage.setItem("usuario", usuario);
-
-      navigate("/dashboard"); 
-    } else {
+    try {
+      await login(usuario, password);
+      console.log(usuario,password)
+      navigate("/dashboard");
+    } catch (err) {
       setError("Usuario o contraseña incorrectos ❌");
     }
   };
