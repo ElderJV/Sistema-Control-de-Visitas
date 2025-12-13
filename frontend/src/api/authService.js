@@ -2,11 +2,12 @@ import api from "./axiosConfig";
 
 export default {
   login: async (email, password) => {
-    // Cambiar la estructura de envio del post de login
-    const res = await api.post("/auth/token", {
-      username: email,
-      password,
-    });
+    // Enviar como form-data para OAuth2PasswordRequestForm
+    const formData = new FormData();
+    formData.append("username", email);
+    formData.append("password", password);
+
+    const res = await api.post("/auth/token", formData);
     return res.data;
   },
 
